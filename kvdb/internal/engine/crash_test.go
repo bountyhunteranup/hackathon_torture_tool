@@ -25,10 +25,10 @@ func TestBatchAllOrNothingEveryCut(t *testing.T) {
 		if err != nil {
 			t.Fatalf("cut %d: open failed: %v", cut, err)
 		}
-		if _, ok := d.Get([]byte("a")); !ok {
+		if _, ok, _ := d.Get([]byte("a")); !ok {
 			t.Fatalf("cut %d: key a lost", cut)
 		}
-		if _, ok := d.Get([]byte("b1")); ok {
+		if _, ok, _ := d.Get([]byte("b1")); ok {
 			t.Fatalf("cut %d: partial batch visible", cut)
 		}
 		d.Close()
@@ -53,10 +53,10 @@ func TestTruncatedByOneByte(t *testing.T) {
 		t.Fatalf("open after truncation: %v", err)
 	}
 	defer d.Close()
-	if v, ok := d.Get([]byte("a")); !ok || string(v) != "1" {
+	if v, ok, _ := d.Get([]byte("a")); !ok || string(v) != "1" {
 		t.Fatal("a should survive")
 	}
-	if _, ok := d.Get([]byte("b")); ok {
+	if _, ok, _ := d.Get([]byte("b")); ok {
 		t.Fatal("b was torn and must be absent")
 	}
 }
@@ -75,7 +75,7 @@ func TestAckedWriteSurvivesWithoutClose(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer d2.Close()
-	if v, ok := d2.Get([]byte("k")); !ok || string(v) != "v" {
+	if v, ok, _ := d2.Get([]byte("k")); !ok || string(v) != "v" {
 		t.Fatalf("acked write lost: %q %v", v, ok)
 	}
 	d.Close()
@@ -93,7 +93,7 @@ func TestBatchSameKeyOrderAfterReopen(t *testing.T) {
 	d.Close()
 	d, _ = Open(path, 0)
 	defer d.Close()
-	if _, ok := d.Get([]byte("x")); ok {
+	if _, ok, _ := d.Get([]byte("x")); ok {
 		t.Fatal("x should be absent (last op wins)")
 	}
 }

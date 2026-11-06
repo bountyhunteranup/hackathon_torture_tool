@@ -7,10 +7,10 @@
 
 | # | Found On | Shortcoming | Severity | Status |
 |---|----------|-------------|----------|--------|
-| 1 | 2025-07-15T00:25:00Z | Full file loaded into RAM on Open (io.ReadAll) | High | Open |
-| 2 | 2025-07-15T00:25:00Z | No compaction — log grows forever | High | Open |
+| 1 | 2025-07-15T00:25:00Z | Full file loaded into RAM on Open (io.ReadAll) | High | Fixed 2025-07-15T00:40:00Z |
+| 2 | 2025-07-15T00:25:00Z | No compaction — log grows forever | High | Fixed 2025-07-15T00:50:00Z |
 | 3 | 2025-07-15T00:25:00Z | Single global write lock kills concurrency | Medium | Open |
-| 4 | 2025-07-15T00:25:00Z | Get returns nil,false on closed DB — silent failure | Medium | Open |
+| 4 | 2025-07-15T00:25:00Z | Get returns nil,false on closed DB — silent failure | Medium | Fixed 2025-07-15T00:40:00Z |
 | 5 | 2025-07-15T00:25:00Z | No key validation on Get | Low | Open |
 | 6 | 2025-07-15T00:25:00Z | recover() reads whole file twice on torn tail | Low | Open |
 | 7 | 2025-07-15T00:25:00Z | No syncDir on rollback | Low | Open |

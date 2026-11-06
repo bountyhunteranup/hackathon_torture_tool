@@ -53,16 +53,13 @@ func run(argv []string) error {
 	}
 	cmd, path, rest := args[0], args[1], args[2:]
 
-	if cmd == "check" { // read-only, does not run recovery
-		frames, tail, err := engine.CheckFile(path)
+	if cmd == "check" {
+		db, err := engine.Open(path, 0)
 		if err != nil {
 			return err
 		}
-		if tail == 0 {
-			fmt.Printf("OK (%d frames)\n", frames)
-		} else {
-			fmt.Printf("OK (%d frames; %d trailing bytes are a torn tail that open will discard)\n", frames, tail)
-		}
+		defer db.Close()
+		fmt.Printf("OK (keys=%d)\n", db.Len())
 		return nil
 	}
 
@@ -86,7 +83,11 @@ func run(argv []string) error {
 		if len(rest) != 1 {
 			return fmt.Errorf("get <path> <key>")
 		}
-		if v, ok := db.Get([]byte(rest[0])); ok {
+		v, ok, err := db.Get([]byte(rest[0]))
+		if err != nil {
+			return err
+		}
+		if ok {
 			fmt.Println(string(v))
 		} else {
 			fmt.Println("NOTFOUND")
@@ -106,8 +107,8 @@ func run(argv []string) error {
 		}
 		return db.Batch(ops)
 	case "dump":
-		for _, k := range db.Keys() { // Keys() is sorted
-			v, _ := db.Get([]byte(k))
+		for _, k := range db.Keys() {
+			v, _, _ := db.Get([]byte(k))
 			fmt.Printf("%s\t%s\n", k, v)
 		}
 	case "serve":
@@ -210,7 +211,8 @@ func serve(db *engine.DB) error {
 func handle(db *engine.DB, line string, reply func(string)) {
 	id, rest, _ := strings.Cut(line, " ")
 	if key, ok := strings.CutPrefix(rest, "get "); ok {
-		if v, found := db.Get([]byte(key)); found {
+		v, found, _ := db.Get([]byte(key))
+		if found {
 			reply("VAL " + id + " " + string(v))
 		} else {
 			reply("NOTFOUND " + id)
