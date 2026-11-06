@@ -20,7 +20,10 @@ func TestPutGet(t *testing.T) {
 	if err := db.Put([]byte("name"), []byte("Srinath")); err != nil {
 		t.Fatal(err)
 	}
-	v, ok := db.Get([]byte("name"))
+	v, ok, err := db.Get([]byte("name"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !ok || string(v) != "Srinath" {
 		t.Fatalf("got %q ok=%v", v, ok)
 	}
@@ -28,7 +31,7 @@ func TestPutGet(t *testing.T) {
 
 func TestGetMissing(t *testing.T) {
 	db := openTemp(t)
-	_, ok := db.Get([]byte("ghost"))
+	_, ok, _ := db.Get([]byte("ghost"))
 	if ok {
 		t.Fatal("expected miss")
 	}
@@ -40,7 +43,7 @@ func TestDelete(t *testing.T) {
 	if err := db.Delete([]byte("x")); err != nil {
 		t.Fatal(err)
 	}
-	_, ok := db.Get([]byte("x"))
+	_, ok, _ := db.Get([]byte("x"))
 	if ok {
 		t.Fatal("key should be gone after delete")
 	}
@@ -50,7 +53,10 @@ func TestOverwrite(t *testing.T) {
 	db := openTemp(t)
 	_ = db.Put([]byte("k"), []byte("old"))
 	_ = db.Put([]byte("k"), []byte("new"))
-	v, ok := db.Get([]byte("k"))
+	v, ok, err := db.Get([]byte("k"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !ok || string(v) != "new" {
 		t.Fatalf("expected new, got %q", v)
 	}
@@ -66,10 +72,13 @@ func TestBatch(t *testing.T) {
 	if err := db.Batch(ops); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := db.Get([]byte("a")); ok {
+	if _, ok, _ := db.Get([]byte("a")); ok {
 		t.Fatal("a should be deleted")
 	}
-	v, ok := db.Get([]byte("b"))
+	v, ok, err := db.Get([]byte("b"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !ok || string(v) != "2" {
 		t.Fatalf("b: got %q ok=%v", v, ok)
 	}
@@ -88,7 +97,10 @@ func TestPersistence(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db2.Close()
-	v, ok := db2.Get([]byte("hello"))
+	v, ok, err := db2.Get([]byte("hello"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !ok || string(v) != "world" {
 		t.Fatalf("after reopen: got %q ok=%v", v, ok)
 	}
