@@ -18,17 +18,16 @@ def main():
 
         print("\n--- PHASE 2: INJECT TRUNCATED RECORD ---")
 
-        # Go KVDB frame:
-        # 1 byte type + 4 bytes key length + 4 bytes value length
-        # followed by key and value bytes.
+        # A KVDB frame starts with magic, body length, and CRC32C. The body
+        # here is deliberately incomplete, so recovery should discard it.
         #
         # This frame claims a 5-byte key and 5-byte value,
         # but provides only 2 bytes of key data.
         incomplete_record = (
-            b"\x01"
-            + (5).to_bytes(4, "big")
-            + (5).to_bytes(4, "big")
-            + b"ab"
+            b"KVDB"
+            + (24).to_bytes(4, "little")
+            + b"\x00\x00\x00\x00"
+            + b"partial"
         )
 
         with env.db_path.open("ab") as file:
@@ -37,7 +36,7 @@ def main():
         print("Injected incomplete record:", len(incomplete_record), "bytes")
 
         print("\n--- PHASE 3: RESTART AND WRITE ---")
-        env.recovery.restart()
+        env.restart()
 
         assert env.database.get("baseline") == "safe"
         assert env.database.put("after-corruption", "must-survive") == 204
@@ -46,7 +45,7 @@ def main():
 
         print("\n--- PHASE 4: RESTART AGAIN ---")
         env.controller.stop()
-        env.recovery.restart()
+        env.restart()
 
         actual = env.database.get("after-corruption")
         expected = "must-survive"

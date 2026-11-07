@@ -1,69 +1,64 @@
 
+import os
 import subprocess
-import signal
 
 
 class ProcessController:
 
-    def __init__(self, command):
+    def __init__(self, command, extra_env=None):
         self.command = command
-        self.process: subprocess.Popen | None = None
+        self.process = None
+        self.extra_env = extra_env or {}
 
     def start(self):
 
         if self.is_running():
             raise RuntimeError("Process is already running")
 
-        self.process = subprocess.Popen(self.command)
+        process_env = os.environ.copy()
+        process_env.update(self.extra_env)
 
-        print("Process started!")
-        print("PID:", self.process.pid)
+        self.process = subprocess.Popen(
+            self.command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            env=process_env
+        )
+
+        print("Database started. PID:", self.process.pid)
 
     def is_running(self):
-
-        process = self.process
-
-        if process is None:
-            return False
-
-        return process.poll() is None
-
-    def kill(self):
-
-        process = self.process
-
-        if process is None or process.poll() is not None:
-            print("Process is not running")
-            return
-
-        print("Sending SIGKILL...")
-
-        process.send_signal(signal.SIGKILL)
-
-        try:
-            process.wait(timeout=5)
-
-            print("Process killed!")
-            print("Exit code:", process.returncode)
-
-        except subprocess.TimeoutExpired:
-            raise RuntimeError("Process did not terminate after SIGKILL")
+        return (
+            self.process is not None
+            and self.process.poll() is None
+        )
 
     def stop(self):
 
-        process = self.process
-
-        if process is None or process.poll() is not None:
-            print("Process is not running")
+        if not self.is_running():
             return
 
-        process.terminate()
+        self.process.stdin.close()
 
         try:
-            process.wait(timeout=5)
-
-            print("Process stopped gracefully!")
-
+            self.process.wait(timeout=10)
         except subprocess.TimeoutExpired:
-            print("Graceful shutdown timed out")
-            self.kill()
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait()
+
+            raise RuntimeError("Database did not stop after stdin closed")
+
+        print("Database stopped. Exit:", self.process.returncode)
+
+    def kill(self):
+
+        if self.is_running():
+            self.process.kill()
+            self.process.wait(timeout=5)
+            print("Database killed.")

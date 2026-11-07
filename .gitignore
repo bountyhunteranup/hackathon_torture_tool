@@ -1,6 +1,23 @@
 __pycache__/
-*.pyc
+*.py[cod]
+logs/
+.env
+.venv/
+venv/
+*.db
+*.bak
+.DS_Store
+
+# Python environments and generated files
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.db
+*.bak
+
+# Secrets and runtime output
+.env
+.env.*
 logs/
 .DS_Store
-.env
-venv/

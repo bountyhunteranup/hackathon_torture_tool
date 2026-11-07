@@ -33,7 +33,8 @@ with TestEnvironment() as environment:
     assert verifier.verify()
 
     print("\n--- CAMPAIGN SUMMARY ---")
-    print("Operations executed:", runner.operations)
+    print("Individual database operations:", runner.operations)
+    print("Requests recorded:", len(environment.history.records))
     print("Operations recorded:", len(environment.history.records))
     print("Database:", environment.db_path)
     print("History:", environment.history_path)

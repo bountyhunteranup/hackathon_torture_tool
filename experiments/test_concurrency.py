@@ -1,37 +1,19 @@
+"""Run a concurrent line-protocol campaign against the Go engine."""
+
+from torture.concurrent_client import ConcurrentDatabaseClient
+from torture.concurrent_runner import ConcurrentCampaignRunner
 from torture.environment import TestEnvironment
-from torture.concurrency import ConcurrencyEngine
 
 
-with TestEnvironment() as environment:
-
-    engine = ConcurrencyEngine(
-        base_url=environment.base_url,
-        history=environment.history,
-        workers=4,
-        operations_per_worker=100,
-        seed=42
-    )
-
-    summary = engine.run()
+with TestEnvironment(client_class=ConcurrentDatabaseClient) as environment:
+    runner = ConcurrentCampaignRunner(environment.database, environment.history)
+    summary = runner.run(workers=4, rounds_per_worker=25)
 
     print("\n--- CONCURRENCY SUMMARY ---")
     print("Workers:", summary["workers"])
     print("Total operations:", summary["total_operations"])
     print("Duration:", round(summary["elapsed_seconds"], 3), "seconds")
-    print(
-        "Operations/second:",
-        round(summary["operations_per_second"], 2)
-    )
+    print("Operations/second:", round(summary["operations_per_second"], 2))
+    print("Final state verified:", summary["final_state_verified"])
 
-    print("\n--- OUTCOMES ---")
-
-    outcomes = {}
-
-    for result in summary["results"]:
-        outcome = result["outcome"]
-        outcomes[outcome] = outcomes.get(outcome, 0) + 1
-
-    for outcome, count in sorted(outcomes.items()):
-        print(f"{outcome}: {count}")
-
-    print("\nCONCURRENCY TEST COMPLETED!")
+print("\nCONCURRENCY TEST PASSED!")

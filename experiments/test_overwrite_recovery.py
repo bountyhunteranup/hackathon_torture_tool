@@ -39,9 +39,14 @@ with TestEnvironment() as environment:
 
     print("\n--- RESTARTING DATABASE ---")
 
-    environment.recovery.restart()
+    environment.restart()
 
     print("\n--- VERIFYING AFTER RESTART ---")
+
+    verifier = Verifier(
+        environment.database,
+        runner.oracle
+    )
 
     actual = environment.database.get(key)
 

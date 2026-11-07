@@ -1,28 +1,24 @@
-from torture.environment import TestEnvironment
-from torture.concurrency import ConcurrencyEngine
+"""Benchmark the current concurrent request path."""
+
 from torture.benchmark import BenchmarkAnalyzer
+from torture.concurrent_client import ConcurrentDatabaseClient
+from torture.concurrent_runner import ConcurrentCampaignRunner
+from torture.environment import TestEnvironment
 
 
-with TestEnvironment() as environment:
-
-    engine = ConcurrencyEngine(
-        base_url=environment.base_url,
-        history=environment.history,
-        workers=4,
-        operations_per_worker=500,
-        seed=42
-    )
-
-    execution = engine.run()
+with TestEnvironment(client_class=ConcurrentDatabaseClient) as environment:
+    runner = ConcurrentCampaignRunner(environment.database, environment.history)
+    execution = runner.run(workers=4, rounds_per_worker=125)
 
     analyzer = BenchmarkAnalyzer()
-
     report = analyzer.analyze(
         results=execution["results"],
         elapsed_seconds=execution["elapsed_seconds"],
-        workers=execution["workers"]
+        workers=execution["workers"],
     )
-
     analyzer.display(report)
 
-    print("\nBENCHMARK TEST COMPLETED!")
+    assert report["total_operations"] == 2000
+    assert report["error_rate_percent"] == 0
+
+print("\nBENCHMARK TEST COMPLETED!")

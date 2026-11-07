@@ -1,84 +1,30 @@
-from pathlib import Path
-from tempfile import mkstemp
-import os
+"""Verify acknowledged writes survive an abrupt process restart."""
 
-from torture.controller import ProcessController
-from torture.client import DatabaseClient
+from torture.environment import TestEnvironment
 from torture.runner import TortureRunner
 from torture.verifier import Verifier
-from torture.recovery import RecoveryManager
 
 
-# Locate the Go executable.
-engine = (
-    Path.home()
-    / "Projects/Cosmic_Misfit/kvdb/kvdb-macos"
-)
+def main():
+    with TestEnvironment() as environment:
+        runner = TortureRunner(environment.database, environment.history)
+        runner.put("balance", "500")
+        runner.put("account", "1000")
+        runner.put("balance", "900")
+        runner.delete("account")
 
-# Create a unique disposable database path.
-fd, db_path = mkstemp(
-    prefix="crash-test-",
-    suffix=".db",
-    dir=Path("logs").resolve()
-)
-os.close(fd)
-os.unlink(db_path)
+        expected = runner.oracle.expected_state.copy()
+        print("Expected before crash:", expected)
 
-command = [
-    str(engine),
-    db_path,
-    "serve",
-    "127.0.0.1:8080"
-]
+        environment.controller.kill()
+        environment.restart()
 
-controller = ProcessController(command)
-
-database = DatabaseClient()
-
-recovery = RecoveryManager(
-    controller,
-    "http://127.0.0.1:8080"
-)
-
-try:
-    print("--- STARTING DATABASE ---")
-
-    controller.start()
-    recovery.wait_until_ready()
-
-    runner = TortureRunner(database)
-
-    print("\n--- EXECUTING WORKLOAD ---")
-
-    runner.put("balance", "500")
-    runner.put("account", "1000")
-    runner.put("balance", "900")
-    runner.delete("account")
-
-    print("Oracle:", runner.oracle.expected_state)
-
-    print("\n--- VERIFYING BEFORE CRASH ---")
-
-    verifier = Verifier(database, runner.oracle)
-    assert verifier.verify()
-
-    print("\n--- INJECTING CRASH ---")
-
-    controller.kill()
-
-    print("\n--- RESTARTING DATABASE ---")
-
-    recovery.restart()
-
-    print("\n--- VERIFYING AFTER RECOVERY ---")
-
-    assert verifier.verify()
+        verifier = Verifier(environment.database, runner.oracle)
+        assert verifier.verify_full_state()
+        assert environment.database.dump() == expected
 
     print("\nCRASH RECOVERY TEST PASSED!")
 
-finally:
-    if controller.is_running():
-        controller.kill()
 
-    print("\nDatabase process cleaned up.")
-    print("Test database preserved at:", db_path)
+if __name__ == "__main__":
+    main()

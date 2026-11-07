@@ -1,46 +1,77 @@
-from torture.client import DatabaseClient
+
+from torture.environment import TestEnvironment
 from torture.runner import TortureRunner
 from torture.verifier import Verifier
 
 
-database = DatabaseClient()
-runner = TortureRunner(database)
+def main():
+    print("========== RUNNER INTEGRATION TEST ==========")
 
-print("--- INSERTING DATA ---")
+    # Start a real Go database and connect the Python client.
+    with TestEnvironment() as environment:
 
-runner.put("apple", "100")
-runner.put("banana", "200")
-runner.put("mango", "300")
+        runner = TortureRunner(
+            environment.database,
+            environment.history
+        )
 
-print("Oracle:", runner.oracle.expected_state)
+        print("\n--- INSERTING DATA ---")
 
-print("\n--- UPDATING DATA ---")
+        runner.put("apple", "100")
+        runner.put("banana", "200")
+        runner.put("mango", "300")
 
-runner.put("banana", "900")
+        assert runner.oracle.expected_state == {
+            "apple": "100",
+            "banana": "200",
+            "mango": "300"
+        }
 
-print("Oracle:", runner.oracle.expected_state)
+        print("Oracle:", runner.oracle.expected_state)
 
-print("\n--- READING DATA ---")
+        print("\n--- UPDATING DATA ---")
 
-print("Apple:", runner.get("apple"))
-print("Banana:", runner.get("banana"))
+        runner.put("banana", "900")
 
-print("\n--- DELETING DATA ---")
+        assert runner.oracle.get("banana") == "900"
 
-runner.delete("apple")
+        print("Oracle:", runner.oracle.expected_state)
 
-print("Oracle:", runner.oracle.expected_state)
+        print("\n--- READING DATA ---")
 
-print("\n--- VERIFYING DELETION ---")
+        assert runner.get("apple") == "100"
+        assert runner.get("banana") == "900"
 
-print("Apple:", runner.get("apple"))
+        print("Apple:", runner.oracle.get("apple"))
+        print("Banana:", runner.oracle.get("banana"))
 
-print("\nOperations acknowledged:", runner.operations)
+        print("\n--- DELETING DATA ---")
 
-print("\nRUNNER TEST PASSED!")
+        runner.delete("apple")
 
-print("\n--- FULL DATABASE VERIFICATION ---")
+        assert runner.oracle.get("apple") is None
 
-verifier = Verifier(database, runner.oracle)
+        print("Oracle:", runner.oracle.expected_state)
 
-assert verifier.verify()
+        print("\n--- VERIFYING DELETION ---")
+
+        assert runner.get("apple") is None
+
+        print("\nIndividual operations:", runner.operations)
+
+        print("\n--- VERIFYING DATABASE AGAINST ORACLE ---")
+
+        verifier = Verifier(environment.database, runner.oracle)
+        assert verifier.verify_full_state()
+
+        print("\n--- VERIFYING HISTORY ---")
+
+        assert len(environment.history.records) == runner.operations
+
+        print("History records:", len(environment.history.records))
+
+    print("\nRUNNER INTEGRATION TEST PASSED!")
+
+
+if __name__ == "__main__":
+    main()

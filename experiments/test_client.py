@@ -1,23 +1,26 @@
-from torture.client import DatabaseClient
+"""CRUD smoke test for the current line-protocol DatabaseClient."""
 
-db = DatabaseClient()
+from torture.environment import TestEnvironment
 
-print("--- PUT ---")
-status = db.put("balance", "500")
-print("HTTP status:", status)
 
-print("\n--- GET ---")
-value = db.get("balance")
-print("Retrieved value:", value)
+def main():
+    with TestEnvironment() as environment:
+        database = environment.database
 
-print("\n--- DELETE ---")
-status = db.delete("balance")
-print("HTTP status:", status)
+        print("--- PUT ---")
+        assert database.put("balance", "500") == 204
 
-print("\n--- VERIFY DELETE ---")
-value = db.get("balance")
-print("Retrieved value:", value)
+        print("\n--- GET ---")
+        assert database.get("balance") == "500"
 
-assert value is None
+        print("\n--- DELETE ---")
+        assert database.delete("balance") == 204
 
-print("\nCLIENT TEST PASSED!")
+        print("\n--- VERIFY DELETE ---")
+        assert database.get("balance") is None
+
+    print("\nCLIENT TEST PASSED!")
+
+
+if __name__ == "__main__":
+    main()
